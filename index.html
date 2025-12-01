@@ -35,8 +35,6 @@
   </div>
   
  <script>
-    const repo = 'https://github.com/yionchilau'
-
     let app = new Vue({
       el: "#app",
       data() {
@@ -112,9 +110,6 @@
                 this.loading = false;
               }
             });
-        },
-        goToGayHub() {
-          window.open(repo)
         },
         getOS() {
           let ua = navigator.userAgent,
