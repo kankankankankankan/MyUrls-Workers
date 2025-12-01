@@ -2,11 +2,9 @@ export async function onRequest(context) {
   const { request, env } = context;
   const kv = env.LINKS;
 
-  // 配置允许跨域访问的前端域名
-  const FRONTEND_ORIGIN = "https://u.mjj.cat"; // 替换为你的前端域名
-
+  // 跨域配置：允许任意域名访问
   const corsHeaders = {
-    "Access-Control-Allow-Origin": FRONTEND_ORIGIN,
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
@@ -60,14 +58,13 @@ export async function onRequest(context) {
       return await handleUrlStorage(kv, decodedLongUrl, rawShortKey);
     }
 
-    // 方法不允许（理论上不会触发405，OPTIONS/GET/POST已处理）
+    // 方法不允许
     return new Response(JSON.stringify({ Code: 405, Message: "Method not allowed" }), { status: 405, headers: corsHeaders });
 
   } catch (err) {
     return new Response(JSON.stringify({ Code: 500, Message: "Worker exception", Error: err.message }), { status: 500, headers: corsHeaders });
   }
 
-  // 处理 KV 存储逻辑
   async function handleUrlStorage(kv, longUrl, shortKey) {
     const blockedDomains = ["cloudfront.net", "github.io"];
     for (const domain of blockedDomains) {
@@ -88,7 +85,7 @@ export async function onRequest(context) {
 
     await kv.put(shortKey, longUrl);
 
-    const host = request.headers.get("host") || "your-pages-domain.pages.dev";
+    const host = request.headers.get("host") || "example.pages.dev";
     const shortUrl = `https://${host}/${shortKey}`;
     const ip = request.headers.get("cf-connecting-ip") || null;
     const city = (request.cf && request.cf.city) || null;
