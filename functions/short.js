@@ -2,9 +2,10 @@ export async function onRequest(context) {
     const { request, env } = context;
     const kv = env.LINKS;
 
-    // CORS 头部配置
+    // CORS 头部配置（严格指定前端域名）
+    const FRONTEND_ORIGIN = "https://u.mjj.cat";
     const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': FRONTEND_ORIGIN,
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json'
@@ -53,7 +54,7 @@ export async function onRequest(context) {
             return await handleUrlStorage(kv, longUrl, shortKey);
         }
 
-        // 处理 POST 请求（自动兼容 JSON/表单/纯文本）
+        // 处理 POST 请求
         else if (method === "POST") {
             const { longUrl: rawLongUrl, shortKey: rawShortKey, contentType } = await parseBodyAuto(request);
 
@@ -98,7 +99,6 @@ export async function onRequest(context) {
      * URL 存储逻辑
      */
     async function handleUrlStorage(kv, longUrl, shortKey) {
-        // 检查违规域名
         const blockedDomains = ["cloudfront.net", "github.io"];
         for (const domain of blockedDomains) {
             if (longUrl.includes(domain)) {
@@ -121,7 +121,6 @@ export async function onRequest(context) {
 
         await kv.put(shortKey, longUrl);
 
-        // 获取 Host 和客户端信息
         const host = request.headers.get("CDN-Client-Host") ||
                      request.headers.get("EO-Client-Host") ||
                      request.headers.get("host");
@@ -143,9 +142,6 @@ export async function onRequest(context) {
         }), { status: 200, headers: corsHeaders });
     }
 
-    /**
-     * 随机短码生成
-     */
     function generateRandomKey(length) {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         let result = '';
@@ -155,42 +151,29 @@ export async function onRequest(context) {
         return result;
     }
 
-    /**
-     * Base64 解码
-     */
     function decodeBase64(encodedString) {
         return atob(encodedString);
     }
 
-    /**
-     * 自动解析 POST 请求体
-     */
     async function parseBodyAuto(request) {
         const contentType = (request.headers.get("content-type") || "").toLowerCase();
 
-        // JSON
         if (contentType.includes("application/json")) {
             const data = await request.json().catch(() => ({}));
             return { longUrl: data.longUrl ?? null, shortKey: data.shortKey ?? null, contentType };
         }
 
-        // 表单
         if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
             const formData = await request.formData();
             return { longUrl: formData.get("longUrl") ?? null, shortKey: formData.get("shortKey") ?? null, contentType };
         }
 
-        // 纯文本尝试解析
         const raw = await request.text();
         try {
             const params = new URLSearchParams(raw);
-            const maybeLong = params.get("longUrl");
-            const maybeShort = params.get("shortKey");
-            if (maybeLong !== null || maybeShort !== null) {
-                return { longUrl: maybeLong, shortKey: maybeShort, contentType: contentType || "text/plain" };
-            }
-        } catch (_) {}
-
-        return { longUrl: null, shortKey: null, contentType: contentType || "unknown" };
+            return { longUrl: params.get("longUrl") ?? null, shortKey: params.get("shortKey") ?? null, contentType: contentType || "text/plain" };
+        } catch (_) {
+            return { longUrl: null, shortKey: null, contentType: contentType || "unknown" };
+        }
     }
 }
