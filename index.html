@@ -4,43 +4,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MyUrls</title>
+  <title>MyUrls - 一个轻量级短链接服务</title>
   <link rel="icon" href="//img.znnu.com/favicon.ico" type="image/x-icon">
-  <!-- 自建静态资源CDN By ~ Edge One-->
   <link href="//cdnjs.znnu.com/element-ui/2.13.0/theme-chalk/index.css" type="text/css" rel="stylesheet" />
   <script src="//cdnjs.znnu.com/vue/2.6.11/vue.min.js" type="application/javascript"></script>
   <script src="//cdnjs.znnu.com/element-ui/2.13.0/index.js" type="application/javascript"></script>
   <script src="//cdnjs.znnu.com/vue-clipboard2/0.3.1/vue-clipboard.min.js" type="application/javascript"></script>
   <script src="//cdnjs.znnu.com/jquery/3.6.0/jquery.min.js" type="application/javascript"></script>
-  <!-- 自建静态资源CDN By ~ Edge One-->
-</head>
+  </head>
 
 <body>
   <div id="app">
-    <el-container>
-      <el-header></el-header>
+    <el-container class="wrapper">
+      
+      <el-header height="60px">
+        <div class="header-inner">
+          <div class="logo-text">MyUrls</div>
+          <div class="nav-links">
+            <a href="/">首页</a>
+          </div>
+        </div>
+      </el-header>
+
       <el-main>
         <div :class="[isPc ? 'body-center body-width-pc' : 'body-center body-width-mb']">
-          <img width="300" src="//img.znnu.com/myurls/logo.png">
-          <el-input ref="long" v-model="longUrl" size="medium" @keyup.enter.native="enterToDoShort">
-            <el-button slot="append" icon="el-icon-magic-stick" @click="doShort" :loading="loading"></el-button>
-          </el-input>
-          <el-input ref="shortUrl" @dblclick.native="changeDisableStatus" class="copy-content" v-model="shortUrl" size="medium">
-            <el-button slot="append" v-clipboard:copy="shortUrl" v-clipboard:success="onCopy" ref="copy-btn"
-              icon="el-icon-document-copy"></el-button>
-          </el-input>
+          
+          <div class="title-area">
+            <h1>MyUrls</h1>
+            <p class="subtitle">一个轻量级短链接服务</p>
+          </div>
+
+          <div class="input-area">
+            <el-input 
+              ref="long" 
+              v-model="longUrl" 
+              size="medium" 
+              placeholder="输入长链接"
+              @keyup.enter.native="enterToDoShort"
+              class="custom-input">
+              <el-button slot="append" @click="doShort" :loading="loading">生成链接</el-button>
+            </el-input>
+            
+            <el-input 
+              ref="shortUrl" 
+              @dblclick.native="changeDisableStatus" 
+              class="copy-content custom-input" 
+              v-model="shortUrl" 
+              placeholder="生成短链接"
+              size="medium">
+              <el-button slot="append" v-clipboard:copy="shortUrl" v-clipboard:success="onCopy" ref="copy-btn">
+                复制链接
+              </el-button>
+            </el-input>
+          </div>
+
         </div>
       </el-main>
+
+      <el-footer>
+        <p>© MyUrls. All rights reserved.</p>
+      </el-footer>
+
     </el-container>
   </div>
-  
- <script>
+   
+  <script>
     let app = new Vue({
       el: "#app",
       data() {
         return {
           isPc: true,
-
           loading: false,
           longUrl: '',
           shortUrl: ''
@@ -54,19 +87,17 @@
       },
       mounted() {
           this.$refs.long && this.$refs.long.focus();
-        
+          
           // 检查并处理 ?error=notfound
           const url = new URL(window.location.href);
           const error = url.searchParams.get("error");
-        
+          
           if (error === "404") {
             this.$message.error("短链接已失效，请重新生成！");
-        
-            // 清理 URL 参数，避免刷新后重复提示
+            
+            // 清理 URL 参数
             url.searchParams.delete("error");
-            // 如果还有其他参数，保留它们；否则退回到纯路径
-            const cleanUrl =
-              url.search ? `${url.pathname}${url.search}${url.hash}` : `${url.pathname}${url.hash}`;
+            const cleanUrl = url.search ? `${url.pathname}${url.search}${url.hash}` : `${url.pathname}${url.hash}`;
             history.replaceState(null, "", cleanUrl || "/");
           }
         },
@@ -87,7 +118,6 @@
             data.append("longUrl", btoa(this.longUrl));
             data.append("shortKey", this.shortUrl.indexOf('http') < 0 ? this.shortUrl : '');
 
-            // 使用 jQuery 的 ajax 方法代替 axios
             $.ajax({
               url: '/short',
               type: 'POST',
@@ -143,25 +173,125 @@
   </script>
 
   <style>
+    /* 全局重置 */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f7f7f7; /* 浅灰背景 */
+      font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+    }
+
+    #app, .wrapper {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 顶部导航栏样式 */
+    .el-header {
+      background-color: #333; /* 深色背景 */
+      color: #fff;
+      padding: 0 20px;
+    }
+
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .nav-links a {
+      color: #ddd;
+      text-decoration: none;
+      margin-left: 20px;
+      font-size: 14px;
+      transition: color 0.3s;
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+    }
+
+    /* 主体内容布局 */
+    .el-main {
+      position: relative;
+      padding: 0; /* 去除默认padding以便自定义 */
+    }
+
     .body-center {
-      width: 40%;
       position: absolute;
       left: 50%;
-      top: 30%;
+      top: 35%; /* 稍微向上提一点 */
       transform: translate(-50%, -50%);
       text-align: center;
     }
 
     .body-width-pc {
-      width: 40%;
+      width: 500px; /* 固定宽度，看起来更像卡片或专注模式 */
     }
 
     .body-width-mb {
       width: 90%;
     }
 
-    .el-input {
+    /* 标题区域样式 */
+    .title-area h1 {
+      font-weight: 300; /* 细字体 */
+      font-size: 48px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .title-area .subtitle {
+      color: #888;
+      font-size: 16px;
+      margin-top: 0;
+      margin-bottom: 40px;
+      font-weight: 300;
+    }
+
+    /* 输入框样式覆盖 - 核心修改 */
+    .input-area .el-input {
       margin-top: 20px;
+    }
+
+    /* 覆盖 Element UI 的 append 样式，做成深色按钮 */
+    .custom-input .el-input-group__append {
+      background-color: #555 !important;
+      border-color: #555 !important;
+      color: #fff !important;
+      border-top-right-radius: 4px;
+      border-bottom-right-radius: 4px;
+    }
+    
+    .custom-input .el-input-group__append button.el-button {
+      color: #fff !important;
+      font-weight: 500;
+    }
+
+    .custom-input .el-input__inner {
+      border-right: 0; /* 让左边输入框和右边按钮融合更好 */
+    }
+
+    .custom-input .el-input__inner:focus {
+      border-color: #555; /* 聚焦颜色改为灰色系 */
+    }
+
+    /* Footer 样式 */
+    .el-footer {
+      text-align: center;
+      color: #999;
+      font-size: 12px;
+      line-height: 60px;
+      background-color: transparent;
     }
   </style>
 </body>
