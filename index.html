@@ -1,169 +1,151 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE HTML>
+<html>
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MyUrls</title>
-  <link rel="icon" href="//img.znnu.com/favicon.ico" type="image/x-icon">
-  <!-- 自建静态资源CDN By ~ Edge One-->
-  <link href="//cdnjs.znnu.com/element-ui/2.13.0/theme-chalk/index.css" type="text/css" rel="stylesheet" />
-  <script src="//cdnjs.znnu.com/vue/2.6.11/vue.min.js" type="application/javascript"></script>
-  <script src="//cdnjs.znnu.com/element-ui/2.13.0/index.js" type="application/javascript"></script>
-  <script src="//cdnjs.znnu.com/vue-clipboard2/0.3.1/vue-clipboard.min.js" type="application/javascript"></script>
-  <script src="//cdnjs.znnu.com/jquery/3.6.0/jquery.min.js" type="application/javascript"></script>
-  <!-- 自建静态资源CDN By ~ Edge One-->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/stilleshan/dockerfiles/myurls/public/css/main.css" />
+  <script src="https://unpkg.com/vue@2.6.11/dist/vue.min.js"></script>
+  <script src="https://unpkg.com/axios@0.19.2/dist/axios.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
 </head>
 
-<body>
+<body class="is-preload">
   <div id="app">
-    <el-container>
-      <el-header></el-header>
-      <el-main>
-        <div :class="[isPc ? 'body-center body-width-pc' : 'body-center body-width-mb']">
-          <img width="300" src="//img.znnu.com/myurls/logo.png">
-          <el-input ref="long" v-model="longUrl" size="medium" @keyup.enter.native="enterToDoShort">
-            <el-button slot="append" icon="el-icon-magic-stick" @click="doShort" :loading="loading"></el-button>
-          </el-input>
-          <el-input ref="shortUrl" @dblclick.native="changeDisableStatus" class="copy-content" v-model="shortUrl" size="medium">
-            <el-button slot="append" v-clipboard:copy="shortUrl" v-clipboard:success="onCopy" ref="copy-btn"
-              icon="el-icon-document-copy"></el-button>
-          </el-input>
+    <div id="page-wrapper">
+
+      <!-- Header -->
+      <header id="header">
+        <h1><a href="/">MyUrls</a></h1>
+        <nav id="nav">
+          <ul>
+            <li><a href="/">首页</a></li>
+          </ul>
+        </nav>
+      </header>
+
+      <!-- Main -->
+      <section id="main" class="container medium">
+        <header>
+          <h2>MyUrls</h2>
+          <p>一个轻量级短链接服务</p>
+        </header>
+        <div class="box">
+          <form method="post" action="#">
+            <div class="row gtr-50 gtr-uniform">
+              <div class="col-9 col-8-mobilep">
+                <input type="text" ref="long" v-model="longUrl" value="" placeholder="输入长链接" />
+              </div>
+              <div class="col-3 col-4-mobilep">
+                <ul class="actions special">
+                  <li><input type="button" value="生成链接" @click="doShort()" /></li>
+                </ul>
+              </div>
+              <div class="col-9 col-8-mobilep">
+                <input type="text" v-model="shortUrl" value="" placeholder="生成短链接" />
+              </div>
+              <div class="col-3 col-4-mobilep">
+                <ul class="actions special">
+                  <li><input type="button" value="复制链接" @click="toCopy(shortUrl)" /></li>
+                </ul>
+              </div>
+            </div>
+          </form>
         </div>
-      </el-main>
-    </el-container>
+      </section>
+
+      <!-- Footer 
+      <footer id="footer">
+        <ul class="copyright">
+          <li>&copy; <a href="https://github.com/stilleshan/dockerfiles/tree/main/myurls" target="_blank">MyUrls</a>.
+            All rights reserved.</li>
+        </ul>
+      </footer>-->
+    </div>
   </div>
-  
- <script>
+
+  <script>
+    const backend = 'https://u.igeek.ing'
+
     let app = new Vue({
       el: "#app",
       data() {
         return {
-          isPc: true,
-
-          loading: false,
           longUrl: '',
-          shortUrl: ''
+          shortUrl: '',
         }
       },
-      created() {
-        const os = this.getOS()
-        if (os.isPc !== true) {
-          this.isPc = false
-        }
-      },
-      mounted() {
-          this.$refs.long && this.$refs.long.focus();
-        
-          // 检查并处理 ?error=notfound
-          const url = new URL(window.location.href);
-          const error = url.searchParams.get("error");
-        
-          if (error === "404") {
-            this.$message.error("短链接已失效，请重新生成！");
-        
-            // 清理 URL 参数，避免刷新后重复提示
-            url.searchParams.delete("error");
-            // 如果还有其他参数，保留它们；否则退回到纯路径
-            const cleanUrl =
-              url.search ? `${url.pathname}${url.search}${url.hash}` : `${url.pathname}${url.hash}`;
-            history.replaceState(null, "", cleanUrl || "/");
-          }
-        },
       methods: {
-        enterToDoShort(ev) {
-          ev.keyCode === 13 && this.doShort()
+        showDialog(title, msg, level) {
+          this.$confirm(title, msg, {
+            showCancelButton: false,
+            showConfirmButton: false,
+            type: level,
+            center: true,
+            callback: action => {
+              // console.log('显示成功')
+            }
+          })
         },
         doShort() {
           let re = new RegExp('http(s*)://[^\s]*')
           if (re.exec(this.longUrl) === null) {
-            this.$message.warning('请输入正确格式的长链接')
+            this.showDialog('请输入正确格式的长链接', '错误', 'error');
             return
           }
-
-          this.loading = true
-
-            let data = new URLSearchParams();
-            data.append("longUrl", btoa(this.longUrl));
-            data.append("shortKey", this.shortUrl.indexOf('http') < 0 ? this.shortUrl : '');
-
-            // 使用 jQuery 的 ajax 方法代替 axios
-            $.ajax({
-              url: '/short',
-              type: 'POST',
-              data: data.toString(),
-              contentType: 'application/x-www-form-urlencoded; charset=utf-8',
-              success: (res) => {
-                if (res.Code === 1 && res.ShortUrl !== "") {
-                  this.shortUrl = res.ShortUrl;
-                  this.$copyText(this.shortUrl)
-                  this.$refs.shortUrl.disabled = true
-                  this.$message.success("短链接已复制到剪贴板");
-                } else {
-                  this.$message.error("短链接获取失败：" + res.Message);
-                }
-              },
-              error: () => {
-                this.$message.error("短链接获取失败");
-              },
-              complete: () => {
-                this.loading = false;
+          let data = new FormData();
+          data.append("longUrl", btoa(this.longUrl));
+          data.append("shortKey", this.shortUrl.indexOf('http') < 0 ? this.shortUrl : '');
+          axios.post(backend + '/short', data, {
+            header: {
+              "Content-Type": "application/form-data; charset=utf-8"
+            }
+          })
+            .then(res => {
+              if (res.data.Code === 1 && res.data.ShortUrl !== "") {
+                this.shortUrl = res.data.ShortUrl;
+                this.toCopy(this.shortUrl)
+              } else {
+                this.showDialog('短链接获取失败', '错误', 'error');
               }
+            })
+            .catch(() => {
+              this.showDialog('短链接获取失败', '错误', 'error');
             });
         },
-        getOS() {
-          let ua = navigator.userAgent,
-            isWindowsPhone = /(?:Windows Phone)/.test(ua),
-            isSymbian = /(?:SymbianOS)/.test(ua) || isWindowsPhone,
-            isAndroid = /(?:Android)/.test(ua),
-            isFireFox = /(?:Firefox)/.test(ua),
-            isChrome = /(?:Chrome|CriOS)/.test(ua),
-            isTablet = /(?:iPad|PlayBook)/.test(ua) || (isAndroid && !/(?:Mobile)/.test(ua)) || (isFireFox && /(?:Tablet)/.test(ua)),
-            isPhone = /(?:iPhone)/.test(ua) && !isTablet,
-            isPc = !isPhone && !isAndroid && !isSymbian;
-
-          return {
-            isTablet: isTablet,
-            isPhone: isPhone,
-            isAndroid: isAndroid,
-            isPc: isPc
-          };
+        toCopy(url) {
+          if (!url) {
+            this.showDialog('复制失败 内容为空', '错误', 'error');
+          } else {
+            var copyInput = document.createElement('input');
+            copyInput.setAttribute('value', url);
+            document.body.appendChild(copyInput);
+            copyInput.select();
+            try {
+              var copyed = document.execCommand('copy');
+              if (copyed) {
+                document.body.removeChild(copyInput);
+                this.showDialog('复制成功 ' + this.shortUrl, '成功', 'success');
+              }
+            } catch {
+              this.showDialog('复制失败', '错误', 'error');
+            }
+          }
         },
-        getBodyClass() {
-          return this.isPc ? 'body-center body-width-pc' : 'body-center'
-        },
-        onCopy() {
-          this.$message.success("Copied!");
-        },
-        changeDisableStatus(event) {
-          this.$refs.shortUrl.disabled = false
-        }
       },
     })
   </script>
-
-  <style>
-    .body-center {
-      width: 40%;
-      position: absolute;
-      left: 50%;
-      top: 30%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-    }
-
-    .body-width-pc {
-      width: 40%;
-    }
-
-    .body-width-mb {
-      width: 90%;
-    }
-
-    .el-input {
-      margin-top: 20px;
-    }
-  </style>
+  <script src="https://cdn.jsdelivr.net/gh/stilleshan/dockerfiles/myurls/public/js/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/stilleshan/dockerfiles/myurls/public/js/jquery.dropotron.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/stilleshan/dockerfiles/myurls/public/js/jquery.scrollex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/stilleshan/dockerfiles/myurls/public/js/browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/stilleshan/dockerfiles/myurls/public/js/breakpoints.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/stilleshan/dockerfiles/myurls/public/js/util.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/stilleshan/dockerfiles/myurls/public/js/main.js"></script>
 </body>
 
 </html>
